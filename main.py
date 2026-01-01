@@ -43,6 +43,12 @@ sessions = {}
 # Processing flag to handle one message per chat at a time
 processing_chats = {}
 
+# Last response time per chat to implement rate limiting
+last_response_time = {}
+
+# Minimum delay between responses (in seconds)
+MIN_RESPONSE_DELAY = 3
+
 def process_ai_response(chat_id, user_text, message):
     """Process AI response and handle common logic"""
     # Initialize session if new user
@@ -122,16 +128,44 @@ def process_ai_response(chat_id, user_text, message):
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    sessions[message.chat.id] = [SYSTEM_PROMPT]
-    if message.chat.type == 'private':
-        bot.reply_to(message, "Hey! I'm Akane, a chat bot inspired from Oshi no Ko. What's up?")
-    else:
-        bot.reply_to(message, "Kya baat hai bolo yaar?")
+    chat_id = message.chat.id
+    sessions[chat_id] = [SYSTEM_PROMPT]
+
+    # Apply rate limiting to commands too
+    current_time = time.time()
+    if chat_id in last_response_time:
+        time_since_last_response = current_time - last_response_time[chat_id]
+        if time_since_last_response < MIN_RESPONSE_DELAY:
+            delay_needed = MIN_RESPONSE_DELAY - time_since_last_response
+            time.sleep(delay_needed)
+
+    try:
+        if message.chat.type == 'private':
+            bot.reply_to(message, "Hey! I'm Akane, a chat bot inspired from Oshi no Ko. What's up?")
+        else:
+            bot.reply_to(message, "Kya baat hai bolo yaar?")
+        last_response_time[chat_id] = time.time()
+    except Exception as e:
+        print(f"Failed to send start message: {e}")
 
 @bot.message_handler(commands=['clear'])
 def clear(message):
-    sessions[message.chat.id] = [SYSTEM_PROMPT]
-    bot.reply_to(message, "History clear kar di gayi hai!")
+    chat_id = message.chat.id
+    sessions[chat_id] = [SYSTEM_PROMPT]
+
+    # Apply rate limiting to commands too
+    current_time = time.time()
+    if chat_id in last_response_time:
+        time_since_last_response = current_time - last_response_time[chat_id]
+        if time_since_last_response < MIN_RESPONSE_DELAY:
+            delay_needed = MIN_RESPONSE_DELAY - time_since_last_response
+            time.sleep(delay_needed)
+
+    try:
+        bot.reply_to(message, "History clear kar di gayi hai!")
+        last_response_time[chat_id] = time.time()
+    except Exception as e:
+        print(f"Failed to send clear message: {e}")
 
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
@@ -144,8 +178,18 @@ def handle_message(message):
     if message.chat.type != 'private' and message.reply_to_message and message.reply_to_message.from_user.id != bot.get_me().id:
         return
 
+    # Implement rate limiting: check time since last response
+    current_time = time.time()
+    if chat_id in last_response_time:
+        time_since_last_response = current_time - last_response_time[chat_id]
+        if time_since_last_response < MIN_RESPONSE_DELAY:
+            delay_needed = MIN_RESPONSE_DELAY - time_since_last_response
+            print(f"Rate limiting: waiting {delay_needed:.1f} seconds for chat {chat_id}")
+            time.sleep(delay_needed)
+
     # Prevent concurrent processing per chat
     if chat_id in processing_chats and processing_chats[chat_id]:
+        print(f"Chat {chat_id} already processing, skipping message")
         return
     processing_chats[chat_id] = True
 
@@ -154,7 +198,13 @@ def handle_message(message):
 
     ai_response = process_ai_response(chat_id, user_text, message)
     if ai_response:
-        bot.reply_to(message, ai_response)
+        try:
+            bot.reply_to(message, ai_response)
+            # Update last response time after successful send
+            last_response_time[chat_id] = time.time()
+        except Exception as e:
+            print(f"Failed to send message: {e}")
+            # Don't update last_response_time if send failed
 
 # Main execution
 if __name__ == "__main__":
