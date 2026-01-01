@@ -2,7 +2,7 @@ import telebot
 import os
 import time
 import random
-from groq import Groq
+from groq import Groq, RateLimitError
 from dotenv import load_dotenv
 import datetime
 
@@ -57,13 +57,25 @@ def process_ai_response(chat_id, user_text, message):
         bot.send_chat_action(chat_id, 'typing')
         time.sleep(random.uniform(4, 6))  # Random delay to look more human
 
-        # Call Groq API
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=sessions[chat_id],
-            temperature=0.7,
-            max_tokens=256,
-        )
+        # Try with first API key
+        try:
+            completion = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=sessions[chat_id],
+                temperature=0.7,
+                max_tokens=256,
+            )
+            print("Used primary API key")
+        except RateLimitError:
+            print("Primary API key rate limited, switching to secondary key")
+            # Try with second API key
+            completion = client2.chat.completions.create(
+                model=MODEL_NAME,
+                messages=sessions[chat_id],
+                temperature=0.7,
+                max_tokens=256,
+            )
+            print("Used secondary API key")
 
         ai_response = completion.choices[0].message.content
 
@@ -76,6 +88,20 @@ def process_ai_response(chat_id, user_text, message):
 
         return ai_response
 
+    except RateLimitError as e:
+        print(f"Both API keys rate limited: {e}")
+        # Log rate limit error to logger group
+        if LOG_GROUP_ID:
+            try:
+                current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                chat_title = message.chat.title if hasattr(message.chat, 'title') and message.chat.title else "Private"
+                group_info = f"Chat ID: {chat_id}, Title: {chat_title}"
+                message_link = f"https://t.me/c/{str(chat_id).replace('-100', '')}/{message.message_id}"
+                log_text = f"Rate limit error - both keys exhausted at {current_time}\nGroup Info: {group_info}\nMessage Link: {message_link}\nError: {str(e)}"
+                bot.send_message(LOG_GROUP_ID, log_text)
+            except:
+                pass  # Ignore logging errors
+        return None
     except Exception as e:
         print(f"Error: {e}")
         # Log error to logger group
