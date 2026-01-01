@@ -1,3 +1,4 @@
+import telebot
 import os
 import time
 import random
@@ -18,43 +19,37 @@ LOG_GROUP_ID = os.getenv('LOG_GROUP_ID')
 GROQ_API_KEY_2 = os.getenv('GROQ_API_KEY_2')
 MODEL_NAME = "llama-3.3-70b-versatile" # The best free model currently
 
-# Initialize Groq clients
+# Initialize Clients
 client = Groq(api_key=GROQ_API_KEY)
 client2 = Groq(api_key=GROQ_API_KEY_2)
 
 # Determine which client to use based on MODE
 if MODE == 'userbot':
     if STRING_SESSION:
-        # Userbot mode with string session
-        from pyrogram import Client, filters
-        from pyrogram.enums import ChatAction
-        bot = Client("akane_userbot", session_string=STRING_SESSION)
-        IS_USERBOT = True
+        from pyrogram import Client
+        bot = Client("AkaneBot", session_string=STRING_SESSION)
+        is_userbot = True
         print("Running in USERBOT mode with string session")
-    elif TELEGRAM_BOT_TOKEN:
-        # Fallback to bot mode if no string session
-        import telebot
-        bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
-        IS_USERBOT = False
-        print("String session not found, falling back to BOT mode")
     else:
-        raise ValueError("MODE=userbot requires either STRING_SESSION or TELEGRAM_BOT_TOKEN")
+        print("USERBOT mode selected but no STRING_SESSION provided. Falling back to BOT mode.")
+        MODE = 'bot'
+        is_userbot = False
 elif MODE == 'bot':
-    if TELEGRAM_BOT_TOKEN:
-        # Bot mode
-        import telebot
-        bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
-        IS_USERBOT = False
-        print("Running in BOT mode")
-    else:
-        raise ValueError("MODE=bot requires TELEGRAM_BOT_TOKEN")
+    is_userbot = False
+    print("Running in BOT mode")
 else:
-    raise ValueError("MODE must be either 'bot' or 'userbot'")
+    print(f"Invalid MODE '{MODE}'. Defaulting to BOT mode.")
+    MODE = 'bot'
+    is_userbot = False
 
-# Get bot username for bot mode
-bot_username = None
-if not IS_USERBOT:
+# Initialize bot client for bot mode
+if not is_userbot:
+    if not TELEGRAM_BOT_TOKEN:
+        raise ValueError("TELEGRAM_BOT_TOKEN is required for BOT mode")
+    bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
     bot_username = bot.get_me().username
+else:
+    bot_username = "AkaneUserbot"
 
 # System instruction for Hinglish personality
 SYSTEM_PROMPT = {
@@ -69,75 +64,8 @@ sessions = {}
 # Processing flag to handle one message per chat at a time
 processing_chats = {}
 
-def handle_start(message):
-    """Handle /start command"""
-    chat_id = message.chat.id
-    sessions[chat_id] = [SYSTEM_PROMPT]
-
-    if IS_USERBOT:
-        # Pyrogram message object
-        is_private = message.chat.type == "private"
-        response_text = "Hey! I'm Akane, a chat bot inspired from Oshi no Ko. What's up?" if is_private else "Kya baat hai bolo yaar?"
-        bot.send_message(chat_id, response_text)
-    else:
-        # Telebot message object
-        if message.chat.type == 'private':
-            bot.reply_to(message, "Hey! I'm Akane, a chat bot inspired from Oshi no Ko. What's up?")
-        else:
-            bot.reply_to(message, "Kya baat hai bolo yaar?")
-
-def handle_clear(message):
-    """Handle /clear command - owner only"""
-    user_id = message.from_user.id
-
-    if OWNER_ID and user_id != OWNER_ID:
-        response_text = "Sorry, only the owner can use this command."
-        if IS_USERBOT:
-            bot.send_message(message.chat.id, response_text)
-        else:
-            bot.reply_to(message, response_text)
-        return
-
-    chat_id = message.chat.id
-    sessions[chat_id] = [SYSTEM_PROMPT]
-
-    if IS_USERBOT:
-        bot.send_message(chat_id, "History clear kar di gayi hai!")
-    else:
-        bot.reply_to(message, "History clear kar di gayi hai!")
-
-def handle_message(message):
-    """Handle regular messages"""
-    if IS_USERBOT:
-        # Pyrogram message object
-        if message.from_user.is_bot:
-            return
-
-        chat_id = message.chat.id
-        user = message.from_user
-
-        # Check if should respond in group: don't respond if replying to another user
-        if message.chat.type != "private" and message.reply_to_message and message.reply_to_message.from_user.id != bot.me.id:
-            return
-    else:
-        # Telebot message object
-        if message.from_user.is_bot:
-            return
-
-        chat_id = message.chat.id
-
-        # Check if should respond in group: don't respond if replying to another user
-        if message.chat.type != 'private' and message.reply_to_message and message.reply_to_message.from_user.id != bot.get_me().id:
-            return
-
-    # Prevent concurrent processing per chat
-    if chat_id in processing_chats and processing_chats[chat_id]:
-        return
-    processing_chats[chat_id] = True
-
-    user_name = message.from_user.first_name or message.from_user.username or "User"
-    user_text = f"{user_name}: {message.text}"
-
+def process_ai_response(chat_id, user_text, message):
+    """Process AI response and handle common logic"""
     # Initialize session if new user
     if chat_id not in sessions:
         sessions[chat_id] = [SYSTEM_PROMPT]
@@ -146,9 +74,9 @@ def handle_message(message):
     sessions[chat_id].append({"role": "user", "content": user_text})
 
     try:
-        # Send typing action
-        if IS_USERBOT:
-            bot.send_chat_action(chat_id, ChatAction.TYPING)
+        # Send typing action (different for each client)
+        if is_userbot:
+            bot.send_chat_action(chat_id, "typing")
         else:
             bot.send_chat_action(chat_id, 'typing')
 
@@ -171,61 +99,121 @@ def handle_message(message):
         if len(sessions[chat_id]) > 11:
             sessions[chat_id] = [SYSTEM_PROMPT] + sessions[chat_id][-10:]
 
-        # Send response
-        if IS_USERBOT:
-            bot.send_message(chat_id, ai_response)
-        else:
-            bot.reply_to(message, ai_response)
+        return ai_response
 
     except Exception as e:
         print(f"Error: {e}")
         # Log error to logger group
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        if IS_USERBOT:
-            group_info = f"Chat ID: {chat_id}, Title: {message.chat.title or 'Private'}"
-            message_link = f"https://t.me/c/{str(chat_id).replace('-100', '')}/{message.id}"
-        else:
-            group_info = f"Chat ID: {chat_id}, Title: {message.chat.title if hasattr(message.chat, 'title') and message.chat.title else 'Private'}"
-            message_link = f"https://t.me/c/{str(chat_id).replace('-100', '')}/{message.message_id}"
+        group_info = f"Chat ID: {chat_id}, Title: {getattr(message.chat, 'title', 'Private') if hasattr(message, 'chat') else 'Private'}"
+        message_link = f"https://t.me/c/{str(chat_id).replace('-100', '')}/{getattr(message, 'id', 'unknown')}"
         log_text = f"Error occurred at {current_time}\nGroup Info: {group_info}\nMessage Link: {message_link}\nError: {str(e)}"
-        if IS_USERBOT:
-            bot.send_message(LOG_GROUP_ID, log_text)
-        else:
-            bot.send_message(LOG_GROUP_ID, log_text)
+        if LOG_GROUP_ID:
+            try:
+                if is_userbot:
+                    bot.send_message(int(LOG_GROUP_ID), log_text)
+                else:
+                    bot.send_message(LOG_GROUP_ID, log_text)
+            except:
+                pass  # Ignore logging errors
+        return None
     finally:
-        processing_chats[chat_id] = False
+        if chat_id in processing_chats:
+            processing_chats[chat_id] = False
 
-# Register handlers based on mode
-if IS_USERBOT:
-    # Pyrogram handlers
-    @bot.on_message(filters.command("start"))
-    async def pyrogram_start(client, message):
-        handle_start(message)
-
-    @bot.on_message(filters.command("clear"))
-    async def pyrogram_clear(client, message):
-        handle_clear(message)
-
-    @bot.on_message(filters.text & ~filters.command(["start", "clear"]))
-    async def pyrogram_message(client, message):
-        handle_message(message)
-else:
-    # Telebot handlers
+# Bot mode handlers (using telebot)
+if not is_userbot:
     @bot.message_handler(commands=['start'])
-    def telebot_start(message):
-        handle_start(message)
+    def start(message):
+        sessions[message.chat.id] = [SYSTEM_PROMPT]
+        if message.chat.type == 'private':
+            bot.reply_to(message, "Hey! I'm Akane, a chat bot inspired from Oshi no Ko. What's up?")
+        else:
+            bot.reply_to(message, "Kya baat hai bolo yaar?")
 
     @bot.message_handler(commands=['clear'])
-    def telebot_clear(message):
-        handle_clear(message)
+    def clear(message):
+        # Check if user is owner (only owner can clear history)
+        if OWNER_ID and message.from_user.id != OWNER_ID:
+            bot.reply_to(message, "Sorry, only the owner can use this command!")
+            return
+
+        sessions[message.chat.id] = [SYSTEM_PROMPT]
+        bot.reply_to(message, "History clear kar di gayi hai!")
 
     @bot.message_handler(func=lambda message: True)
-    def telebot_message(message):
-        handle_message(message)
+    def handle_message(message):
+        if message.from_user.is_bot:
+            return
 
-# Start the bot based on mode
+        chat_id = message.chat.id
+
+        # Check if should respond in group: don't respond if replying to another user
+        if message.chat.type != 'private' and message.reply_to_message and message.reply_to_message.from_user.id != bot.get_me().id:
+            return
+
+        # Prevent concurrent processing per chat
+        if chat_id in processing_chats and processing_chats[chat_id]:
+            return
+        processing_chats[chat_id] = True
+
+        user_name = message.from_user.first_name or message.from_user.username or "User"
+        user_text = f"{user_name}: {message.text}"
+
+        ai_response = process_ai_response(chat_id, user_text, message)
+        if ai_response:
+            bot.reply_to(message, ai_response)
+
+# Userbot mode handlers (using pyrogram)
+else:
+    @bot.on_message()
+    async def handle_userbot_message(client, message):
+        # Handle commands
+        if message.text and message.text.startswith('/'):
+            command = message.text.split()[0].lower()
+
+            if command == '/start':
+                sessions[message.chat.id] = [SYSTEM_PROMPT]
+                if message.chat.type == 'private':
+                    await message.reply("Hey! I'm Akane, a chat bot inspired from Oshi no Ko. What's up?")
+                else:
+                    await message.reply("Kya baat hai bolo yaar?")
+                return
+
+            elif command == '/clear':
+                # Check if user is owner (only owner can clear history)
+                if OWNER_ID and message.from_user.id != OWNER_ID:
+                    await message.reply("Sorry, only the owner can use this command!")
+                    return
+
+                sessions[message.chat.id] = [SYSTEM_PROMPT]
+                await message.reply("History clear kar di gayi hai!")
+                return
+
+        # Skip bot messages
+        if message.from_user.is_bot:
+            return
+
+        chat_id = message.chat.id
+
+        # Check if should respond in group: don't respond if replying to another user
+        if message.chat.type != 'private' and message.reply_to_message and message.reply_to_message.from_user.id != (await client.get_me()).id:
+            return
+
+        # Prevent concurrent processing per chat
+        if chat_id in processing_chats and processing_chats[chat_id]:
+            return
+        processing_chats[chat_id] = True
+
+        user_name = message.from_user.first_name or message.from_user.username or "User"
+        user_text = f"{user_name}: {message.text}"
+
+        ai_response = process_ai_response(chat_id, user_text, message)
+        if ai_response:
+            await message.reply(ai_response)
+
+# Main execution
 if __name__ == "__main__":
-    import time
     import logging
 
     # Set up logging
@@ -238,23 +226,14 @@ if __name__ == "__main__":
     print("Bot is starting...")
     logger.info("Bot initialization complete")
 
-    if IS_USERBOT:
-        # Pyrogram userbot mode - uses asyncio
-        import asyncio
-
-        async def run_userbot():
-            await bot.start()
-            print("Userbot is running and connected...")
-            logger.info("Userbot connected successfully")
-
-            # Keep the bot running
-            await bot.idle()
-
-        # Run the userbot
-        asyncio.run(run_userbot())
-
+    if is_userbot:
+        # Userbot mode using pyrogram
+        print("Starting userbot with pyrogram...")
+        bot.run()
     else:
-        # Telebot polling mode with network robustness
+        # Bot mode using telebot with robust polling
+        import time
+
         # Connection retry parameters
         max_retries = 10
         base_delay = 5  # seconds

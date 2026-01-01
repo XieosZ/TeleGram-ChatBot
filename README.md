@@ -19,35 +19,27 @@ A conversational AI Telegram bot named Akane (inspired by Oshi no Ko anime) that
 3. Set up environment variables:
    - Copy `sample.env` to `.env`
    - Fill in your actual API keys and tokens in the `.env` file
-   - Required variables:
-     - `MODE`: Set to `'bot'` for traditional bot mode or `'userbot'` for user account mode
-     - **For Bot Mode (`MODE=bot`)**:
-       - `TELEGRAM_BOT_TOKEN`: Get from [@BotFather](https://t.me/botfather) on Telegram
-     - **For Userbot Mode (`MODE=userbot`)**:
-       - `STRING_SESSION`: Generate using [this tool](https://replit.com/@TeamUltroid/StringSessionGenerator)
-       - `OWNER_ID`: Your Telegram user ID (get from [@userinfobot](https://t.me/userinfobot))
-     - **Common (both modes)**:
-       - `GROQ_API_KEY` & `GROQ_API_KEY_2`: Get from [Groq Console](https://console.groq.com/)
-       - `LOG_GROUP_ID`: Create a private Telegram group, add your bot/user, and get the group ID
-       - `GOOGLE_API_KEY`: Get from [Google Cloud Console](https://console.cloud.google.com/)
+   - Required variables depend on the mode you choose:
+
+### Bot Mode (Traditional Bot)
+Set `MODE=bot` in your `.env` file:
+- `TELEGRAM_BOT_TOKEN`: Get from [@BotFather](https://t.me/botfather) on Telegram
+- `GROQ_API_KEY` & `GROQ_API_KEY_2`: Get from [Groq Console](https://console.groq.com/)
+- `LOG_GROUP_ID`: Create a private Telegram group, add your bot, and get the group ID
+- `OWNER_ID`: Your Telegram user ID (for restricted commands)
+- `GOOGLE_API_KEY`: Get from [Google Cloud Console](https://console.cloud.google.com/)
+
+### Userbot Mode (User Account)
+Set `MODE=userbot` in your `.env` file:
+- `STRING_SESSION`: Generate using [this tool](https://replit.com/@TeamUltroid/StringSessionGenerator)
+- `GROQ_API_KEY` & `GROQ_API_KEY_2`: Get from [Groq Console](https://console.groq.com/)
+- `LOG_GROUP_ID`: Create a private Telegram group, add your user account, and get the group ID
+- `OWNER_ID`: Your Telegram user ID (for restricted commands)
+- `GOOGLE_API_KEY`: Get from [Google Cloud Console](https://console.cloud.google.com/)
+
+**Note**: If `MODE=userbot` but no `STRING_SESSION` is provided, the bot will automatically fall back to `MODE=bot` if `TELEGRAM_BOT_TOKEN` is available.
+
 4. Run the bot: `python main.py` or double-click `start_bot.bat`
-
-## Bot Modes
-
-### Traditional Bot Mode (`MODE=bot`)
-- Uses Telegram Bot API
-- Requires bot token from @BotFather
-- Limited to bot-specific features
-- Automatic network reconnection on WiFi switches
-
-### User Account Mode (`MODE=userbot`)
-- Runs as a regular Telegram user account
-- Full access to user features and groups
-- Requires string session for authentication
-- `/clear` command restricted to owner only
-- Better for advanced use cases
-
-**Note**: If `MODE=userbot` but no `STRING_SESSION` is provided, it will automatically fall back to bot mode if `TELEGRAM_BOT_TOKEN` is available.
 
 ## APIs Used
 
