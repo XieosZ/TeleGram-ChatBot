@@ -31,7 +31,7 @@ Set `MODE=bot` in your `.env` file:
 
 ### Userbot Mode (User Account)
 Set `MODE=userbot` in your `.env` file:
-- `STRING_SESSION`: Generate using [this tool](https://replit.com/@TeamUltroid/StringSessionGenerator)
+- `STRING_SESSION`: Generate using [@SessionGeniBot](https://t.me/SessionGeniBot)
 - `GROQ_API_KEY` & `GROQ_API_KEY_2`: Get from [Groq Console](https://console.groq.com/)
 - `LOG_GROUP_ID`: Create a private Telegram group, add your user account, and get the group ID
 - `OWNER_ID`: Your Telegram user ID (for restricted commands)
