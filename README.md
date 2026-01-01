@@ -16,11 +16,14 @@ A conversational AI Telegram bot named Akane (inspired by Oshi no Ko anime) that
 
 1. Clone the repository
 2. Install dependencies: `pip install -r requirements.txt`
-3. Create a `.env` file with your API keys:
-   ```
-   TELEGRAM_BOT_TOKEN=your_telegram_bot_token
-   GROQ_API_KEY=your_groq_api_key
-   ```
+3. Set up environment variables:
+   - Copy `sample.env` to `.env`
+   - Fill in your actual API keys and tokens in the `.env` file
+   - Required variables:
+     - `TELEGRAM_BOT_TOKEN`: Get from [@BotFather](https://t.me/botfather) on Telegram
+     - `GROQ_API_KEY` & `GROQ_API_KEY_2`: Get from [Groq Console](https://console.groq.com/)
+     - `LOG_GROUP_ID`: Create a private Telegram group, add your bot, and get the group ID
+     - `GOOGLE_API_KEY`: Get from [Google Cloud Console](https://console.cloud.google.com/)
 4. Run the bot: `python main.py` or double-click `start_bot.bat`
 
 ## APIs Used
