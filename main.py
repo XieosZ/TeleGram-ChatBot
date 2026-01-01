@@ -105,16 +105,28 @@ async def process_ai_response(chat_id, user_text, message):
         print(f"Error: {e}")
         # Log error to logger group
         current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        group_info = f"Chat ID: {chat_id}, Title: {getattr(message.chat, 'title', 'Private') if hasattr(message, 'chat') else 'Private'}"
-        message_link = f"https://t.me/c/{str(chat_id).replace('-100', '')}/{getattr(message, 'id', 'unknown')}"
+
+        # Safely get chat title
+        chat_title = "Private"
+        if hasattr(message, 'chat') and message.chat:
+            if hasattr(message.chat, 'title') and message.chat.title:
+                chat_title = message.chat.title
+            elif isinstance(message.chat, str):
+                chat_title = message.chat
+
+        group_info = f"Chat ID: {chat_id}, Title: {chat_title}"
+        message_id = getattr(message, 'id', 'unknown')
+        message_link = f"https://t.me/c/{str(chat_id).replace('-100', '')}/{message_id}"
         log_text = f"Error occurred at {current_time}\nGroup Info: {group_info}\nMessage Link: {message_link}\nError: {str(e)}"
+
         if LOG_GROUP_ID:
             try:
                 if is_userbot:
                     await bot.send_message(int(LOG_GROUP_ID), log_text)
                 else:
                     bot.send_message(LOG_GROUP_ID, log_text)
-            except:
+            except Exception as log_error:
+                print(f"Failed to send error log: {log_error}")
                 pass  # Ignore logging errors
         return None
     finally:
