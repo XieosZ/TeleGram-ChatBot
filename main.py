@@ -64,7 +64,7 @@ sessions = {}
 # Processing flag to handle one message per chat at a time
 processing_chats = {}
 
-def process_ai_response(chat_id, user_text, message):
+async def process_ai_response(chat_id, user_text, message):
     """Process AI response and handle common logic"""
     # Initialize session if new user
     if chat_id not in sessions:
@@ -76,7 +76,7 @@ def process_ai_response(chat_id, user_text, message):
     try:
         # Send typing action (different for each client)
         if is_userbot:
-            bot.send_chat_action(chat_id, "typing")
+            await bot.send_chat_action(chat_id, "typing")
         else:
             bot.send_chat_action(chat_id, 'typing')
 
@@ -111,7 +111,7 @@ def process_ai_response(chat_id, user_text, message):
         if LOG_GROUP_ID:
             try:
                 if is_userbot:
-                    bot.send_message(int(LOG_GROUP_ID), log_text)
+                    await bot.send_message(int(LOG_GROUP_ID), log_text)
                 else:
                     bot.send_message(LOG_GROUP_ID, log_text)
             except:
@@ -160,7 +160,9 @@ if not is_userbot:
         user_name = message.from_user.first_name or message.from_user.username or "User"
         user_text = f"{user_name}: {message.text}"
 
-        ai_response = process_ai_response(chat_id, user_text, message)
+        # Create event loop for async call in sync context
+        import asyncio
+        ai_response = asyncio.run(process_ai_response(chat_id, user_text, message))
         if ai_response:
             bot.reply_to(message, ai_response)
 
@@ -208,7 +210,7 @@ else:
         user_name = message.from_user.first_name or message.from_user.username or "User"
         user_text = f"{user_name}: {message.text}"
 
-        ai_response = process_ai_response(chat_id, user_text, message)
+        ai_response = await process_ai_response(chat_id, user_text, message)
         if ai_response:
             await message.reply(ai_response)
 
