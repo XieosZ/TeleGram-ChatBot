@@ -5,12 +5,16 @@ A conversational AI Telegram bot named Akane (inspired by Oshi no Ko anime) that
 ## Features
 
 - **Hinglish Responses**: Casual mix of Hindi and English for relatable conversations
-- **Session Memory**: Remembers conversation history for each user individually
-- **Short & Casual**: Responses are kept concise and friendly
+- **Session Memory**: Remembers conversation history for each user individually (keeps last 10 messages to save tokens)
+- **Short & Casual**: Responses are kept concise and friendly, mimicking human texting style
+- **Rate Limit Handling**: Cycles through multiple Groq API keys to handle rate limits automatically
+- **Error Logging**: Logs errors and rate limit issues to a designated Telegram group
+- **Connection Resilience**: Automatic reconnection with exponential backoff on network failures
 - **Commands**:
-  - `/start`: Initialize and greet
-  - `/clear`: Reset conversation history
-- **Robust Polling**: Handles network issues with timeouts
+  - `/start`: Initialize and greet the bot
+  - `/clear`: Reset conversation history for the chat
+- **Group Support**: Responds only when mentioned or replied to in groups to avoid spam
+- **Typing Indicators**: Shows typing action for more human-like interaction
 
 ## Setup
 
@@ -20,8 +24,8 @@ A conversational AI Telegram bot named Akane (inspired by Oshi no Ko anime) that
    - Copy `sample.env` to `.env`
    - Fill in your actual API keys and tokens in the `.env` file:
      - `TELEGRAM_BOT_TOKEN`: Get from [@BotFather](https://t.me/botfather) on Telegram
-     - `GROQ_API_KEY` & `GROQ_API_KEY_2`: Get from [Groq Console](https://console.groq.com/)
-     - `LOG_GROUP_ID`: Create a private Telegram group, add your bot, and get the group ID
+     - `GROQ_API_KEY_1` to `GROQ_API_KEY_7`: Get from [Groq Console](https://console.groq.com/) (create multiple accounts for higher rate limits)
+     - `LOG_GROUP_ID`: Create a private Telegram group, add your bot, and get the group ID (optional, for error logging)
 4. Run the bot: `python main.py` or double-click `start_bot.bat`
 
 ## APIs Used
@@ -31,9 +35,11 @@ A conversational AI Telegram bot named Akane (inspired by Oshi no Ko anime) that
 
 ## Notes
 
-- Free Groq tier has higher limits than Gemini free tier
-- Bot uses session management to isolate user conversations
-- Downgraded httpx to 0.27.2 for compatibility
+- Free Groq tier provides higher rate limits than other free AI services
+- Bot uses session management to isolate user conversations and maintain context
+- Supports up to 7 Groq API keys for maximum rate limit handling
+- Uses httpx 0.24.1 for HTTP requests compatibility
+- Bot only responds in private chats or when directly replied to in groups
 
 ## License
 
