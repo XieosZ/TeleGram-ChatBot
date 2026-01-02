@@ -28,6 +28,23 @@ A conversational AI Telegram bot named Akane (inspired by Oshi no Ko anime) that
      - `LOG_GROUP_ID`: Create a private Telegram group, add your bot, and get the group ID (optional, for error logging)
 4. Run the bot: `python main.py` or double-click `start_bot.bat`
 
+### Termux (Android) Setup
+
+For Android devices using Termux:
+
+1. Install Termux from F-Droid or Google Play Store
+2. Open Termux and run the setup script:
+   ```bash
+   git clone https://github.com/XieosZ/TeleGram-ChatBot.git
+   cd TeleGram-ChatBot
+   chmod +x setup.sh
+   ./setup.sh
+   ```
+3. Follow the on-screen instructions to configure your API keys
+4. Run the bot: `./run_bot.sh`
+
+The setup script will automatically install all dependencies and create the necessary files.
+
 ## APIs Used
 
 - **Telegram Bot API**: For bot interactions
