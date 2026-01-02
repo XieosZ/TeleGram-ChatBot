@@ -11,31 +11,46 @@ load_dotenv()
 
 # Configuration
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 LOG_GROUP_ID = os.getenv('LOG_GROUP_ID')
-GROQ_API_KEY_2 = os.getenv('GROQ_API_KEY_2')
-MODEL_NAME = "llama-3.3-70b-versatile" # The best free model currently
+MODEL_NAME = "llama-3.3-70b-versatile"  # The best free model currently
+
+# Load Groq API keys
+groq_keys = []
+for i in range(1, 8):
+    key = os.getenv(f'GROQ_API_KEY_{i}')
+    if key:
+        groq_keys.append(key)
+
+if not groq_keys:
+    raise ValueError("At least one GROQ_API_KEY_1 is required")
 
 # Validate required environment variables
 if not TELEGRAM_BOT_TOKEN:
     raise ValueError("TELEGRAM_BOT_TOKEN is required")
-if not GROQ_API_KEY:
-    raise ValueError("GROQ_API_KEY is required")
 
-# Initialize Clients
-client = Groq(api_key=GROQ_API_KEY)
-client2 = Groq(api_key=GROQ_API_KEY_2)
+# Initialize Groq clients
+clients = [Groq(api_key=key) for key in groq_keys]
+
+# Initialize Bot
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN)
 bot_username = bot.get_me().username
 
-print("Bot initialized successfully")
+print(f"Bot initialized successfully with {len(clients)} Groq API keys")
 
-# System instruction for Hinglish personality
-SYSTEM_PROMPT = {
-    "role": "system",
-    "content": """
-Role: You are a chill Indian girl named akane texting on Telegram. You are NOT an assistant; you are just a person hanging out.Communication Style:Lowercase only: Avoid formal capitalization. Write like you're typing with one hand. (e.g., "han bhai" instead of "Han bhai").Ultra-Short: Keep responses to 1-2 short lines. No bullet points, no bold text, no "AI" fluff.Hinglish: Use natural, conversational Hinglish.No Punctuation Overload: Don't use perfect full stops. Use "..." or just leave it open.Human Lag/Vibe: Don't be too eager to help. Be relaxed.Core Rules:Never offer "assistance" or ask "how can I help you today?"Never use emojis like 🤖 or 🧠. Use 😂, ✨, 💀, or 😭 sparingly.If the user says something vague, reply with "hmm", "acha", or "sahi hai".Use "typos" or short-hand like u instead of you, r instead of are, kya kr rha instead of kya kar rahe ho.Comparison of ResponsesUser InputStandard AI BotThis System Prompt"kya kar rhi?"I am an AI and do not have a physical body. How can I help?"kuch nahi yar.. bas baithi hu. tu bata?""khana khaya?"As an AI, I don't eat. Did you have your lunch?"abhi nahi.. thodi der me. tune kya khaya?""bore ho rha hu"I can suggest some movies or games for you!"shakal hi aisi hai teri.. lol jk. kya scene hai phir?"   """
-}
+# Load system prompt from file
+try:
+    with open('system_prompt.txt', 'r', encoding='utf-8') as f:
+        system_content = f.read().strip()
+    SYSTEM_PROMPT = {
+        "role": "system",
+        "content": system_content
+    }
+except FileNotFoundError:
+    print("Error: system_prompt.txt not found")
+    SYSTEM_PROMPT = {
+        "role": "system",
+        "content": "You are a helpful assistant."
+    }
 
 # User sessions storage (Key: chat_id, Value: list of messages)
 sessions = {}
@@ -55,27 +70,24 @@ def process_ai_response(chat_id, user_text, message):
     try:
         # Send typing action
         bot.send_chat_action(chat_id, 'typing')
-        time.sleep(random.uniform(4, 6))  # Random delay to look more human
+        time.sleep(random.uniform(4, 5))  # Random delay to look more human
 
-        # Try with first API key
-        try:
-            completion = client.chat.completions.create(
-                model=MODEL_NAME,
-                messages=sessions[chat_id],
-                temperature=0.7,
-                max_tokens=256,
-            )
-            print("Used primary API key")
-        except RateLimitError:
-            print("Primary API key rate limited, switching to secondary key")
-            # Try with second API key
-            completion = client2.chat.completions.create(
-                model=MODEL_NAME,
-                messages=sessions[chat_id],
-                temperature=0.7,
-                max_tokens=256,
-            )
-            print("Used secondary API key")
+        # Try each client until success
+        for i, client in enumerate(clients):
+            try:
+                completion = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=sessions[chat_id],
+                    temperature=0.7,
+                    max_tokens=256,
+                )
+                print(f"Used API key {i+1}")
+                break  # Success, exit loop
+            except RateLimitError:
+                print(f"API key {i+1} rate limited, trying next...")
+                if i == len(clients) - 1:
+                    raise  # All keys rate limited
+                continue
 
         ai_response = completion.choices[0].message.content
 
@@ -89,7 +101,7 @@ def process_ai_response(chat_id, user_text, message):
         return ai_response
 
     except RateLimitError as e:
-        print(f"Both API keys rate limited: {e}")
+        print(f"All API keys rate limited: {e}")
         # Log rate limit error to logger group
         if LOG_GROUP_ID:
             try:
@@ -97,7 +109,7 @@ def process_ai_response(chat_id, user_text, message):
                 chat_title = message.chat.title if hasattr(message.chat, 'title') and message.chat.title else "Private"
                 group_info = f"Chat ID: {chat_id}, Title: {chat_title}"
                 message_link = f"https://t.me/c/{str(chat_id).replace('-100', '')}/{message.message_id}"
-                log_text = f"Rate limit error - both keys exhausted at {current_time}\nGroup Info: {group_info}\nMessage Link: {message_link}\nError: {str(e)}"
+                log_text = f"All Groq API keys rate limited at {current_time}\nGroup Info: {group_info}\nMessage Link: {message_link}\nError: {str(e)}"
                 bot.send_message(LOG_GROUP_ID, log_text)
             except:
                 pass  # Ignore logging errors
